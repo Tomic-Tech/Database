@@ -1,0 +1,235 @@
+#include "mainwindow.h"
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , _ui()
+    , _langList()
+    , _db(QSqlDatabase::addDatabase(QString::fromLocal8Bit("JMSQLITE")))
+    , _catalogList()
+    , _text(0)
+    , _troubleCode(0)
+    , _liveData(0)
+{
+    _ui.setupUi(this);
+
+    _langList.append(QString::fromUtf8("zh-CN"));
+    _langList.append(QString::fromUtf8("en-US"));
+
+    QByteArray password;
+
+    password.append('2');
+    password.append('0');
+    password.append('4');
+    password.append('3');
+    password.append('E');
+    password.append('D');
+    password.append('8');
+    password.append('E');
+    password.append('-');
+    password.append('4');
+    password.append('E');
+    password.append('3');
+    password.append('5');
+    password.append('-');
+    password.append('4');
+    password.append('B');
+    password.append('F');
+    password.append('A');
+    password.append('-');
+    password.append('A');
+    password.append('C');
+    password.append('2');
+    password.append('9');
+    password.append('-');
+    password.append('1');
+    password.append('7');
+    password.append('5');
+    password.append('6');
+    password.append('E');
+    password.append('5');
+    password.append('5');
+    password.append('3');
+    password.append('4');
+    password.append('0');
+    password.append('5');
+    password.append('D');
+
+    _db.setPassword(password);
+
+    _ui.catalogList->setModel(&_catalogList);
+
+    _text = new TextWidget(_langList, _ui.tabWidget);
+    _ui.tabWidget->addTab(_text, trUtf8("Text"));
+
+    _troubleCode = new TroubleCodeWidget(_langList, _ui.tabWidget);
+    _ui.tabWidget->addTab(_troubleCode, trUtf8("Trouble Code"));
+
+    _liveData = new LiveDataWidget(_langList, _ui.tabWidget);
+    _ui.tabWidget->addTab(_liveData, trUtf8("Live Data"));
+
+    connect(_ui.action_New, SIGNAL(triggered()), this, SLOT(newDB()));
+    connect(_ui.action_Open, SIGNAL(triggered()), this, SLOT(openDB()));
+    connect(_ui.pushButtonInsert, SIGNAL(clicked()), this, SLOT(insertItem()));
+    connect(_ui.pushButtonSubmit, SIGNAL(clicked()), this, SLOT(submit()));
+    connect(_ui.pushButtonDelete, SIGNAL(clicked()), this, SLOT(deleteItem()));
+    connect(_ui.pushButtonAddCatalog, SIGNAL(clicked()), this, SLOT(addCatalog()));
+    connect(_ui.tabWidget, SIGNAL(currentChanged(int)), this, SLOT(changePage(int)));
+    connect(_ui.catalogList, SIGNAL(clicked(QModelIndex)), this, SLOT(catalogChange(QModelIndex)));
+}
+
+MainWindow::~MainWindow()
+{
+
+}
+
+void MainWindow::closeDB()
+{
+    deleteModels();
+    disableAllButtons();
+    _db.close();
+    _catalogList.removeRows(0, _catalogList.rowCount());
+}
+
+void MainWindow::newDB()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, tr("New Database"), QDir::currentPath(), tr("Database Files (*.db)"));
+
+    if (fileName.isEmpty())
+    {
+        return;
+    }
+
+    closeDB();
+    emptyCatalogLists();
+
+    _db.setDatabaseName(fileName);
+    if (!_db.open())
+    {
+        return;
+    }
+
+    createTables();
+    newModels();
+    enableAllButtons();
+}
+
+void MainWindow::openDB()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, trUtf8("Open Database"), QDir::currentPath(), trUtf8("Database Files (*.db)"));
+
+    if (fileName.isEmpty())
+    {
+        return;
+    }
+
+    closeDB();
+    emptyCatalogLists();
+
+    _db.setDatabaseName(fileName);
+    if (!_db.open())
+    {
+        return;
+    }
+
+    createTables();
+    newModels();
+    enableAllButtons();
+}
+
+void MainWindow::createTables()
+{
+    _text->createTable(_db);
+    _troubleCode->createTable(_db);
+}
+
+void MainWindow::enableAllButtons()
+{
+    _ui.pushButtonDelete->setEnabled(true);
+    _ui.pushButtonInsert->setEnabled(true);
+    _ui.pushButtonRevert->setEnabled(true);
+    _ui.pushButtonSubmit->setEnabled(true);
+}
+
+void MainWindow::disableAllButtons()
+{
+    _ui.pushButtonDelete->setEnabled(false);
+    _ui.pushButtonInsert->setEnabled(false);
+    _ui.pushButtonRevert->setEnabled(false);
+    _ui.pushButtonSubmit->setEnabled(false);
+}
+
+void MainWindow::emptyCatalogLists()
+{
+    
+}
+
+void MainWindow::newModels()
+{
+    _text->setDB(_db);
+    _troubleCode->setDB(_db);
+}
+
+void MainWindow::deleteModels()
+{
+
+}
+
+void MainWindow::insertItem()
+{
+    if (_ui.tabWidget->currentWidget() == _text)
+    {
+        _text->insertNewName(_db);
+    }
+    else if (_ui.tabWidget->currentWidget() == _troubleCode)
+    {
+        _troubleCode->insertNewItem(_ui.catalogList->currentIndex().data().toString(), _db);
+    }
+}
+
+void MainWindow::submit()
+{
+    _db.transaction();
+    _db.commit();
+}
+
+void MainWindow::deleteItem()
+{
+    if (_ui.tabWidget->currentWidget() == _text)
+    {
+        _text->deleteItem(_db);
+    }
+    else if (_ui.tabWidget->currentWidget() == _troubleCode)
+    {
+        _troubleCode->deleteItem(_ui.catalogList->currentIndex().data().toString(), _db);
+    }
+}
+
+void MainWindow::addCatalog()
+{
+    QString catalog = _ui.lineEditAddSystem->text();
+    if (_ui.tabWidget->currentWidget() == _troubleCode)
+    {
+        _troubleCode->setCurrentCatalog(catalog);
+        _catalogList.setStringList(_troubleCode->catalogList());
+        _ui.catalogList->setCurrentIndex(_catalogList.index(0));
+    }
+}
+
+void MainWindow::changePage(int index)
+{
+    if (_ui.tabWidget->currentWidget() == _troubleCode)
+    {
+        _catalogList.setStringList(_troubleCode->catalogList());
+        _ui.catalogList->setCurrentIndex(_catalogList.index(0));
+        _troubleCode->setCurrentCatalog(_catalogList.index(0).data().toString());
+    }
+}
+
+void MainWindow::catalogChange(QModelIndex index)
+{
+    QString catalog = index.data().toString();
+    if (_ui.tabWidget->currentWidget() == _troubleCode)
+    {
+        _troubleCode->setCurrentCatalog(catalog);
+    }
+}
