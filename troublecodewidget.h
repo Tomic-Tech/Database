@@ -27,7 +27,7 @@ private:
     bool checkCodeAndCatalog(const QStringList &checkedCode, 
         const QStringList &checkedCatalog, 
         const QString &code,
-        const QString catalog);
+        const QString &catalog);
     void insertNewItem(const QString &code, const QString &catalog, const QString &lang, QSqlDatabase &db);
     void updateCodeAndCatalog(QSqlDatabase &db);
 private slots:

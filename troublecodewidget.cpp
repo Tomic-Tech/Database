@@ -191,7 +191,7 @@ END:
 bool TroubleCodeWidget::checkCodeAndCatalog(const QStringList &checkedCode, 
     const QStringList &checkedCatalog, 
     const QString &code,
-    const QString catalog)
+    const QString &catalog)
 {
     QStringList::const_iterator codeIt = qFind(checkedCode.begin(), checkedCode.end(), code);
     QStringList::const_iterator catalogIt = qFind(checkedCatalog.begin(), checkedCatalog.end(), catalog);

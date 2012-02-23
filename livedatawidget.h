@@ -13,6 +13,14 @@ public:
     void setDB(QSqlDatabase &db);
     void createTable(QSqlDatabase &db);
 private:
+    void adjustItems(QSqlDatabase &db);
+    QHash<QString, QStringList> queryShortNames(QSqlDatabase &db);
+    QHash<QString, QStringList> queryCatalogs(QSqlDatabase &db);
+    bool checkShortNameAndCatalog(const QStringList &checkedShortName,
+        const QStringList &checkedCatalog,
+        const QString &shortName,
+        const QString &catalog);
+private:
     QStringList &_langList;
     QSqlDatabase _db;
     QListView *_shortNameListView;

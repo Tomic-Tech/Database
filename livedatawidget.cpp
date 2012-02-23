@@ -134,6 +134,104 @@ void LiveDataWidget::createTable(QSqlDatabase &db)
 void LiveDataWidget::setDB(QSqlDatabase &db)
 {
     _db = db;
+    adjustItems(db);
+}
+
+QHash<QString, QStringList> LiveDataWidget::queryShortNames(QSqlDatabase &db)
+{
+    QHash<QString, QStringList> shortNameHash;
+
+    for (int i = 0; i < _langList.size(); i++)
+    {
+        QStringList shortNameList;
+        QSqlQuery query(db);
+        QString text("SELECT ShortName FROM [LiveData");
+        text += _langList[i];
+        text += "]";
+
+        if (!query.prepare(text))
+        {
+            goto END;
+        }
+
+        if (!query.exec())
+        {
+            goto END;
+        }
+
+        while (query.next())
+        {
+            shortNameList.append(query.value(0).toString());
+        }
+
+END:
+        shortNameHash.insert(_langList[i], shortNameList);
+    }
+
+    return shortNameHash;
+}
+
+QHash<QString, QStringList> LiveDataWidget::queryCatalogs(QSqlDatabase &db)
+{
+    QHash<QString, QStringList> catalogHash;
+
+    for (int i = 0; i < _langList.size(); i++)
+    {
+        QStringList catalogList;
+        QSqlQuery query(db);
+        QString text("SELECT Catalog FROM [LiveData");
+        text += _langList[i];
+        text += "]";
+
+        if (!query.prepare(text))
+        {
+            goto END;
+        }
+
+        if (!query.exec())
+        {
+            goto END;
+        }
+
+        while (query.next())
+        {
+            QStringList::const_iterator it = qFind(catalogList.begin(), catalogList.end(), query.value(0).toString());
+            if (it == catalogList.end())
+            {
+                catalogList.append(query.value(0).toString());
+            }
+        }
+
+END:
+        catalogHash.insert(_langList[i], catalogList);
+    }
+
+    return catalogHash;
+}
+
+bool LiveDataWidget::checkShortNameAndCatalog(const QStringList &checkedShortName,
+    const QStringList &checkedCatalog,
+    const QString &shortName,
+    const QString &catalog)
+{
+    QStringList::const_iterator shortNameIt = qFind(checkedShortName.begin(), checkedShortName.end(), shortName);
+    QStringList::const_iterator catalogIt = qFind(checkedCatalog.begin(), checkedCatalog.end(), catalog);
+
+    if (shortNameIt == checkedShortName.end() ||
+        catalogIt == checkedCatalog.end())
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void LiveDataWidget::adjustItems(QSqlDatabase &db)
+{
+    QHash<QString, QStringList> shortNameHash = queryShortNames(db);
+    QHash<QString, QStringList> catalogHash = queryCatalogs(db);
+    fixItems(shortNameHash, catalogHash, db);
+    updateShortNameAndCatalog(db);
 }
 
 
