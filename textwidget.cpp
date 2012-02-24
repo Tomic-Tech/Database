@@ -17,6 +17,8 @@ TextWidget::TextWidget(QStringList &langList, QWidget *parent /* = 0 */)
 
     _nameListModel = new QStringListModel();
     _nameListView->setModel(_nameListModel);
+    _nameListView->setEditTriggers(QListView::NoEditTriggers);
+    _nameListView->setSelectionMode(QListView::SingleSelection);
 
     mainLayout->addWidget(_nameListView);
 

@@ -18,6 +18,8 @@ TroubleCodeWidget::TroubleCodeWidget(QStringList &list, QWidget *parent /* = 0 *
 
     _codeListModel = new QStringListModel();
     _codeListView->setModel(_codeListModel);
+    _codeListView->setEditTriggers(QListView::NoEditTriggers);
+    _codeListView->setSelectionMode(QListView::SingleSelection);
 
     mainLayout->addWidget(_codeListView);
 
@@ -278,7 +280,7 @@ void TroubleCodeWidget::updateCodeAndCatalog(QSqlDatabase &db)
     _catalogList.clear();
 
     QSqlQuery query(db);
-    query.prepare("SELECT Catalog FROM [TroubleCode" + _langList[0] + QString("]"));
+    query.prepare(QString("SELECT Catalog FROM [TroubleCode") + _langList[0] + QString("]"));
     query.exec();
     while (query.next())
     {
@@ -357,11 +359,9 @@ void TroubleCodeWidget::updateContent()
         edit->objectName() + 
         QString("] SET Content='") + 
         edit->toPlainText() +
-        QString("'") +
-        QString(" WHERE Code='") +
+        QString("' WHERE Code='") +
         _codeListView->currentIndex().data().toString() +
-        QString("'") +
-        QString(" AND Catalog='") +
+        QString("' AND Catalog='") +
         _currentCatalog +
         QString("'")))
     {
