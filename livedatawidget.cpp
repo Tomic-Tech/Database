@@ -125,7 +125,7 @@ LiveDataWidget::LiveDataWidget(QStringList &langList, QWidget *parent /* = 0 */)
         connect(contentEdit, SIGNAL(textChanged()), this, SLOT(updateContent()));
     }
 
-    connect(_shortNameListView, SIGNAL(clicked(QModelIndex)), this, SLOT(setCurrentCode(QModelIndex)));
+    connect(_shortNameListView, SIGNAL(clicked(QModelIndex)), this, SLOT(setCurrentShortName(QModelIndex)));
 }
 
 LiveDataWidget::~LiveDataWidget()
@@ -270,21 +270,34 @@ void LiveDataWidget::insertNewItem(const QString shortName,
 
     int count = query.value(0).toInt() + 1;
 
+    QString cmdID = _commandIDBox->currentText();
+    QString algID = _algorithmIDBox->currentText();
+    //QString insertText("INSERT INTO [LiveData");
+    //insertText += lang;
+    //insertText += QString("] VALUES(%1, '%2', '%3', '%4', '%5', %6, %7, '%8')")
+    //    .arg(count).arg(shortName).arg(_contentEdits.value(lang)->toPlainText())
+    //    .arg(_defEdits.value(lang)->text())
+    //    .arg(_unitEdit->text())
+    //    .arg(cmdID.isEmpty() ? "-1" : cmdID)
+    //    .arg(algID.isEmpty() ? "-1" : algID)
+    //    .arg(catalog);
     QString insertText("INSERT INTO [LiveData");
-    insertText += lang;
-    insertText += QString("] VALUES(%1, '%2', '%3', '%4', '%5', %6, %7, '%8'")
-        .arg(count).arg(shortName).arg(_contentEdits.value(lang)->toPlainText())
-        .arg(_defEdits.value(lang)->text())
-        .arg(_unitEdit->text())
-        .arg(_commandIDBox->currentText())
-        .arg(_algorithmIDBox->currentText())
-        .arg(catalog);
+    insertText.append(lang);
+    insertText.append(QString("] VALUES(:id, :shortName, :content, :defaultValue, :unit, :cmdID, :algID, :catalog)"));
 
     if (!query.prepare(insertText))
     {
         QString str = query.lastError().databaseText();
         return;
     }
+    query.bindValue(":id", count);
+    query.bindValue(":shortName", shortName);
+    query.bindValue(":content", _contentEdits.value(lang)->toPlainText());
+    query.bindValue(":defaultValue", _defEdits.value(lang)->text());
+    query.bindValue(":unit", _unitEdit->text());
+    query.bindValue(":cmdID", cmdID.isEmpty() ? -1 : cmdID.toInt());
+    query.bindValue(":algID", algID.isEmpty() ? -1 : algID.toInt());
+    query.bindValue(":catalog", catalog);
 
     query.exec();
 }
@@ -333,7 +346,7 @@ void LiveDataWidget::updateShortNameAndCatalog(QSqlDatabase &db)
     _catalogList.clear();
 
     QSqlQuery query(db);
-    query.prepare(QString("SELECT Catalog FORM [LiveData") + _langList[0] + QString("]"));
+    query.prepare(QString("SELECT Catalog FROM [LiveData") + _langList[0] + QString("]"));
     query.exec();
     while (query.next())
     {
@@ -359,18 +372,27 @@ void LiveDataWidget::setCurrentShortName(const QModelIndex &index)
     for (int i = 0; i < _langList.size(); i++)
     {
         QSqlQuery query(_db);
+        //if (!query.prepare(QString("SELECT Content, DefaultValue, Unit, CommandID, AlgorithmID FROM [LiveData") +
+        //    _langList[i] + 
+        //    QString("]") +
+        //    QString("WHERE ShortName='") +
+        //    shortName +
+        //    QString("'") +
+        //    QString(" AND Catalog='") +
+        //    _currentCatalog +
+        //    QString("'")))
+        //{
+        //    continue;
+        //}
         if (!query.prepare(QString("SELECT Content, DefaultValue, Unit, CommandID, AlgorithmID FROM [LiveData") +
-            _langList[i] + 
-            QString("]") +
-            QString("WHERE ShortName='") +
-            shortName +
-            QString("'") +
-            QString(" AND Catalog='") +
-            _currentCatalog +
-            QString("'")))
+            _langList[i] +
+            QString("] WHERE ShortName=:shortName AND Catalog=:catalog")))
         {
             continue;
         }
+
+        query.bindValue(":shortName", shortName);
+        query.bindValue(":catalog", _currentCatalog);
 
         if (!query.exec())
         {
@@ -379,6 +401,7 @@ void LiveDataWidget::setCurrentShortName(const QModelIndex &index)
 
         if (query.next())
         {
+            _shortNameEdit->setText(shortName);
             _contentEdits.value(_langList[i])->setPlainText(query.value(0).toString());
             _defEdits.value(_langList[i])->setText(query.value(1).toString());
             _unitEdit->setText(query.value(2).toString());
@@ -390,16 +413,26 @@ void LiveDataWidget::setCurrentShortName(const QModelIndex &index)
 
 void LiveDataWidget::setCurrentCatalog(const QString &catalog)
 {
+    if (catalog.isEmpty())
+        return;
+
     _currentCatalog = catalog;
     QSqlQuery query(_db);
+    //if (!query.prepare(QString("SELECT ShortName FROM [LiveData") +
+    //    _langList[0] +
+    //    QString("] WHERE Catalog='") +
+    //    catalog +
+    //    QString("'")))
+    //{
+    //    return;
+    //}
     if (!query.prepare(QString("SELECT ShortName FROM [LiveData") +
         _langList[0] +
-        QString("] WHERE Catalog='") +
-        catalog +
-        QString("'")))
+        QString("] WHERE Catalog=:catalog")))
     {
         return;
     }
+    query.bindValue(":catalog", catalog);
 
     if (!query.exec())
     {
@@ -407,6 +440,7 @@ void LiveDataWidget::setCurrentCatalog(const QString &catalog)
     }
 
     _shortNameList.clear();
+    _commandIDBox->clear();
     while (query.next())
     {
         _shortNameList.append(query.value(0).toString());
@@ -416,6 +450,18 @@ void LiveDataWidget::setCurrentCatalog(const QString &catalog)
     if (it == _catalogList.end())
     {
         _catalogList.append(catalog);
+    }
+
+    //query.prepare(QString("SELECT ID FROM [Command] WHERE Catalog='") +
+    //    catalog +
+    //    QString("'"));
+    query.prepare(QString("SELECT ID FROM [Command] WHERE Catalog=:catalog"));
+    query.bindValue(":catalog", catalog);
+    query.exec();
+
+    while (query.next())
+    {
+        _commandIDBox->addItem(query.value(0).toString());
     }
 
     _shortNameListModel->setStringList(_shortNameList);
@@ -436,21 +482,31 @@ void LiveDataWidget::updateContent()
         return;
 
     QSqlQuery query(_db);
+    //if (!query.prepare(QString("UPDATE [LiveData") +
+    //    edit->objectName() + 
+    //    QString("] Set Content='") +
+    //    edit->toPlainText() +
+    //    QString("'") + 
+    //    QString("'") +
+    //    QString(" WHERE ShortName='") +
+    //    _shortNameListView->currentIndex().data().toString() +
+    //    QString("' AND Catalog='") +
+    //    _currentCatalog +
+    //    QString("'")))
+    //{
+    //    QString err = query.lastError().databaseText();
+    //    return;
+    //}
     if (!query.prepare(QString("UPDATE [LiveData") +
-        edit->objectName() + 
-        QString("] Set Content='") +
-        edit->toPlainText() +
-        QString("'") + 
-        QString("'") +
-        QString(" WHERE ShortName='") +
-        _shortNameListView->currentIndex().data().toString() +
-        QString("' AND Catalog='") +
-        _currentCatalog +
-        QString("'")))
+        edit->objectName() +
+        QString("] Set Content=:content WHERE ShortName=:shortName AND Catalog=:catalog")))
     {
         QString err = query.lastError().databaseText();
         return;
     }
+    query.bindValue(":content", edit->toPlainText());
+    query.bindValue(":shortName", _shortNameListView->currentIndex().data());
+    query.bindValue(":catalog", _currentCatalog);
 
     query.exec();
 }
@@ -460,26 +516,36 @@ void LiveDataWidget::updateUnit(const QString &text)
     if (_shortNameListView->hasFocus())
         return;
 
-    if (_isAddNew)
-        return;
+    //if (_isAddNew)
+    //    return;
 
     QSqlQuery query(_db);
 
     for (int i = 0; i < _langList.size(); i++)
     {
+        //if (!query.prepare(QString("UPDATE [LiveData") +
+        //    _langList[i] +
+        //    QString("] SET Unit='") +
+        //    text +
+        //    QString("' WHERE ShortName='") +
+        //    _shortNameListView->currentIndex().data().toString() +
+        //    QString("' AND Catalog='") +
+        //    _currentCatalog +
+        //    QString("'")))
+        //{
+        //    QString err = query.lastError().databaseText();
+        //    continue;
+        //}
         if (!query.prepare(QString("UPDATE [LiveData") +
             _langList[i] +
-            QString("] SET Unit='") +
-            text +
-            QString("' WHERE ShortName='") +
-            _shortNameListView->currentIndex().data().toString() +
-            QString("' AND Catalog='") +
-            _currentCatalog +
-            QString("'")))
+            QString("] SET Unit=:unit WHERE ShortName=:shortName AND Catalog=:catalog")))
         {
             QString err = query.lastError().databaseText();
             continue;
         }
+        query.bindValue(":unit", text);
+        query.bindValue(":shortName", _shortNameListView->currentIndex().data());
+        query.bindValue(":catalog", _currentCatalog);
 
         query.exec();
     }
@@ -497,18 +563,29 @@ void LiveDataWidget::updateCommboxID(const QString &text)
 
     for (int i = 0; i < _langList.size(); i++)
     {
+        //if (!query.prepare(QString("UPDATE [LiveData") +
+        //    _langList[i] +
+        //    QString("] SET CommandID=") +
+        //    text +
+        //    QString(" WHERE ShortName='") +
+        //    _shortNameListView->currentIndex().data().toString() +
+        //    QString("' AND Catalog='") +
+        //    _currentCatalog +
+        //    QString("'")))
+        //{
+        //    QString err = query.lastError().databaseText();
+        //    continue;
+        //}
         if (!query.prepare(QString("UPDATE [LiveData") +
             _langList[i] +
-            QString("] SET CommboxID=") +
-            text +
-            QString(" WHERE ShortName='") +
-            _shortNameListView->currentIndex().data().toString() +
-            QString("' AND Catalog='") +
-            _currentCatalog))
+            QString("] SET CommandID=:cmdID WHERE ShortName=:shortName AND Catalog=:catalog")))
         {
             QString err = query.lastError().databaseText();
             continue;
         }
+        query.bindValue(":cmdID", text.isEmpty() ? -1 : text.toInt());
+        query.bindValue(":shortName", _shortNameListView->currentIndex().data());
+        query.bindValue(":catalog", _currentCatalog);
 
         query.exec();
     }
@@ -526,19 +603,29 @@ void LiveDataWidget::updateAlgorithmID(const QString &text)
 
     for (int i = 0; i < _langList.size(); i++)
     {
+        //if (!query.prepare(QString("UPDATE [LiveData") +
+        //    _langList[i] +
+        //    QString("] SET AlgorithmID=") +
+        //    text +
+        //    QString(" WHERE ShortName='") +
+        //    _shortNameListView->currentIndex().data().toString() +
+        //    QString("' AND Catalog='") +
+        //    _currentCatalog +
+        //    QString("'")))
+        //{
+        //    QString err = query.lastError().databaseText();
+        //    continue;
+        //}
         if (!query.prepare(QString("UPDATE [LiveData") +
             _langList[i] +
-            QString("] SET AlgorithmID=") +
-            text +
-            QString(" WHERE ShortName='") +
-            _shortNameListView->currentIndex().data().toString() +
-            QString("' AND Catalog='") +
-            _currentCatalog +
-            QString("'")))
+            QString("] SET AlgorithmID=:algID WHERE ShortName=:shortName AND Catalog=:catalog")))
         {
             QString err = query.lastError().databaseText();
             continue;
         }
+        query.bindValue(":algID", text.isEmpty() ? -1 : text.toInt());
+        query.bindValue(":shortName", _shortNameListView->currentIndex().data());
+        query.bindValue(":catalog", _currentCatalog);
 
         query.exec();
     }
@@ -549,24 +636,34 @@ void LiveDataWidget::updateDefaultValue(const QString &text)
     if (_shortNameListView->hasFocus())
         return;
 
-    if (_isAddNew)
-        return;
+    //if (_isAddNew)
+    //    return;
 
     QSqlQuery query(_db);
 
+    //if (!query.prepare(QString("UPDATE [LiveData") +
+    //    sender()->objectName() +
+    //    QString("] SET DefaultValue=") +
+    //    text +
+    //    QString(" WHERE ShortName='") +
+    //    _shortNameListView->currentIndex().data().toString() +
+    //    QString("' AND Catalog='") +
+    //    _currentCatalog +
+    //    QString("'")))
+    //{
+    //    QString err = query.lastError().databaseText();
+    //    return;
+    //}
     if (!query.prepare(QString("UPDATE [LiveData") +
         sender()->objectName() +
-        QString("] SET DefaultValue=") +
-        text +
-        QString(" WHERE ShortName='") +
-        _shortNameListView->currentIndex().data().toString() +
-        QString("' AND Catalog='") +
-        _currentCatalog +
-        QString("'")))
+        QString("] SET DefaultValue=:value WHERE ShortName=:shortName AND Catalog=:catalog")))
     {
         QString err = query.lastError().databaseText();
         return;
     }
+    query.bindValue(":value", text);
+    query.bindValue(":shortName", _shortNameListView->currentIndex().data());
+    query.bindValue(":catalog", _currentCatalog);
 
     query.exec();
 }
@@ -593,16 +690,24 @@ void LiveDataWidget::deleteItem(const QString &catalog, QSqlDatabase &db)
     {
         QSqlQuery query(db);
 
+        //if (!query.prepare(QString("DELETE FROM [LiveData") +
+        //    _langList[i] +
+        //    QString("] WHERE ShortName='") +
+        //    shortName +
+        //    QString("' AND Catalog='") +
+        //    catalog +
+        //    QString("'")))
+        //{
+        //    continue;
+        //}
         if (!query.prepare(QString("DELETE FROM [LiveData") +
             _langList[i] +
-            QString("] WHERE ShortName='") +
-            shortName +
-            QString("' AND Catalog='") +
-            catalog +
-            QString("'")))
+            QString("] WHERE ShortName=:shortName AND Catalog=:catalog")))
         {
             continue;
         }
+        query.bindValue(":shortName", shortName);
+        query.bindValue(":catalog", catalog);
 
         if (!query.exec())
         {

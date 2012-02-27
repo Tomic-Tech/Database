@@ -24,8 +24,6 @@ TextWidget::TextWidget(QStringList &langList, QWidget *parent /* = 0 */)
 
     QVBoxLayout *editLayout = new QVBoxLayout(this);
 
-    mainLayout->addLayout(editLayout);
-
     {
         QGroupBox *box = new QGroupBox(this);
         box->setTitle(trUtf8("Name"));
@@ -54,6 +52,7 @@ TextWidget::TextWidget(QStringList &langList, QWidget *parent /* = 0 */)
         connect(edit, SIGNAL(textChanged()), this, SLOT(updateContent()));
     }
 
+    mainLayout->addLayout(editLayout);
     connect(_nameListView, SIGNAL(clicked(QModelIndex)), this, SLOT(setCurrentName(QModelIndex)));
     connect(_nameEdit, SIGNAL(textChanged(QString)), this, SLOT(changeAddNew()));
 }
@@ -138,15 +137,23 @@ void TextWidget::insertNewName(const QString &key, const QString &lang, QSqlData
         return;
     int count = query.value(0).toInt() + 1;
 
+    //QString insertText("INSERT INTO [Text");
+    //insertText += lang;
+    //insertText += QString("] VALUES(%1, '%2', '%3')").arg(count).arg(key).arg(_textEdits.value(lang)->toPlainText());
     QString insertText("INSERT INTO [Text");
     insertText += lang;
-    insertText += QString("] VALUES(%1, '%2', '%3')").arg(count).arg(key).arg(_textEdits.value(lang)->toPlainText());
+    insertText += QString("] VALUES(:id, :name, :content");
 
     if (!query.prepare(insertText))
     {
         QString str = query.lastError().databaseText();
         return;
     }
+
+    query.bindValue(":id", count);
+    query.bindValue(":name", key);
+    query.bindValue(":content", _textEdits.value(lang)->toPlainText());
+
     if (!query.exec())
         return;
 }
@@ -217,15 +224,22 @@ void TextWidget::setCurrentName(const QModelIndex &index)
     for (int i = 0; i < _langList.size(); i++)
     {
         QSqlQuery query(_db);
-        if (!query.prepare(QString("SELECT Content FROM [Text") + 
-            _langList[i] + 
-            QString("]") +
-            QString(" WHERE Name='") +
-            name +
-            QString("'")))
+        //if (!query.prepare(QString("SELECT Content FROM [Text") + 
+        //    _langList[i] + 
+        //    QString("]") +
+        //    QString(" WHERE Name='") +
+        //    name +
+        //    QString("'")))
+        //{
+        //    continue;
+        //}
+        if (!query.prepare(QString("SELECT Content FROM [Text") +
+            _langList[i] +
+            QString("] WHERE Name=:name")))
         {
             continue;
         }
+        query.bindValue(":name", name);
 
         if (!query.exec())
         {
@@ -252,18 +266,27 @@ void TextWidget::updateContent()
         return;
 
     QSqlQuery query(_db);
-    if (!query.prepare(QString("UPDATE [Text") + 
-        edit->objectName() + 
-        QString("] SET Content='") + 
-        edit->toPlainText() +
-        QString("'") +
-        QString(" WHERE Name='") +
-        _nameListView->currentIndex().data().toString() +
-        QString("'")))
+    //if (!query.prepare(QString("UPDATE [Text") + 
+    //    edit->objectName() + 
+    //    QString("] SET Content='") + 
+    //    edit->toPlainText() +
+    //    QString("'") +
+    //    QString(" WHERE Name='") +
+    //    _nameListView->currentIndex().data().toString() +
+    //    QString("'")))
+    //{
+    //    QString err = query.lastError().databaseText();
+    //    return;
+    //}
+    if (!query.prepare(QString("UPDATE [Text") +
+        edit->objectName() +
+        QString("] SET Content=:content WHERE Name=:name")))
     {
         QString err = query.lastError().databaseText();
         return;
     }
+    query.bindValue(":content", edit->toPlainText());
+    query.bindValue(":name", _nameListView->currentIndex().data());
 
     if (!query.exec())
     {
@@ -289,14 +312,21 @@ void TextWidget::deleteItem(QSqlDatabase &db)
     {
         QSqlQuery query(db);
 
+        //if (!query.prepare(QString("DELETE FROM [Text") +
+        //    _langList[i] +
+        //    QString("] WHERE Name='") +
+        //    name +
+        //    QString("'")))
+        //{
+        //    continue;
+        //}
         if (!query.prepare(QString("DELETE FROM [Text") +
             _langList[i] +
-            QString("] WHERE Name='") +
-            name +
-            QString("'")))
+            QString("] WHERE Name=:name")))
         {
             continue;
         }
+        query.bindValue(":name", name);
 
         if (!query.exec())
         {

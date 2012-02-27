@@ -70,12 +70,13 @@ void TroubleCodeWidget::setCurrentCatalog(const QString &catalog)
     QSqlQuery query(_db);
     if (!query.prepare(QString("SELECT Code FROM [TroubleCode") + 
         _langList[0] +
-        QString("] WHERE Catalog='") +
+        QString("] WHERE Catalog=:catalog")/* +
         catalog +
-        QString("'")))
+        QString("'")*/))
     {
         return;
     }
+    query.bindValue(":catalog", catalog);
 
     if (!query.exec())
     {
@@ -221,17 +222,21 @@ void TroubleCodeWidget::insertNewItem(const QString &code, const QString &catalo
 
     QString insertText("INSERT INTO [TroubleCode");
     insertText += lang;
-    insertText += QString("] VALUES(%1, '%2', '%3', '%4')")
-        .arg(count)
-        .arg(code)
-        .arg(_textEdits.value(lang)->toPlainText())
-        .arg(catalog);
+    insertText += QString("] VALUES(:id, :code, :content, :catalog)");
+        //.arg(count)
+        //.arg(code)
+        //.arg(_textEdits.value(lang)->toPlainText())
+        //.arg(catalog);
 
     if (!query.prepare(insertText))
     {
         QString str = query.lastError().databaseText();
         return;
     }
+    query.bindValue(":id", count);
+    query.bindValue(":code", code);
+    query.bindValue(":content", _textEdits.value(lang)->toPlainText());
+    query.bindValue(":catalog", catalog);
     if (!query.exec())
         return;
 }
@@ -317,18 +322,26 @@ void TroubleCodeWidget::setCurrentCode(const QModelIndex &index)
     for (int i = 0; i < _langList.size(); i++)
     {
         QSqlQuery query(_db);
-        if (!query.prepare(QString("SELECT Content FROM [TroubleCode") + 
-            _langList[i] + 
-            QString("]") +
-            QString(" WHERE Code='") +
-            code +
-            QString("'") +
-            QString(" AND Catalog='") +
-            _currentCatalog +
-            QString("'")))
+        //if (!query.prepare(QString("SELECT Code, Content FROM [TroubleCode") + 
+        //    _langList[i] + 
+        //    QString("]") +
+        //    QString(" WHERE Code='") +
+        //    code +
+        //    QString("'") +
+        //    QString(" AND Catalog='") +
+        //    _currentCatalog +
+        //    QString("'")))
+        //{
+        //    continue;
+        //}
+        if (!query.prepare(QString("SELECT Code, Content FROM [TroubleCode") +
+            _langList[i] +
+            QString("] WHERE Code=:code AND Catalog=:catalog")))
         {
             continue;
         }
+        query.bindValue(":code", code);
+        query.bindValue(":catalog", _currentCatalog);
 
         if (!query.exec())
         {
@@ -337,7 +350,8 @@ void TroubleCodeWidget::setCurrentCode(const QModelIndex &index)
 
         if (query.next())
         {
-            _textEdits.value(_langList[i])->setPlainText(query.value(0).toString());
+            _codeEdit->setText(query.value(0).toString());
+            _textEdits.value(_langList[i])->setPlainText(query.value(1).toString());
         }
     }
 }
@@ -355,19 +369,30 @@ void TroubleCodeWidget::updateContent()
         return;
 
     QSqlQuery query(_db);
-    if (!query.prepare(QString("UPDATE [TroubleCode") + 
-        edit->objectName() + 
-        QString("] SET Content='") + 
-        edit->toPlainText() +
-        QString("' WHERE Code='") +
-        _codeListView->currentIndex().data().toString() +
-        QString("' AND Catalog='") +
-        _currentCatalog +
-        QString("'")))
+    //if (!query.prepare(QString("UPDATE [TroubleCode") + 
+    //    edit->objectName() + 
+    //    QString("] SET Content='") + 
+    //    edit->toPlainText() +
+    //    QString("' WHERE Code='") +
+    //    _codeListView->currentIndex().data().toString() +
+    //    QString("' AND Catalog='") +
+    //    _currentCatalog +
+    //    QString("'")))
+    //{
+    //    QString err = query.lastError().databaseText();
+    //    return;
+    //}
+    if (!query.prepare(QString("UPDATE [TroubleCode") +
+        edit->objectName() +
+        QString("] SET Content=:content WHERE Code=:code AND Catalog=:catalog")))
     {
         QString err = query.lastError().databaseText();
         return;
     }
+
+    query.bindValue(":content", edit->toPlainText());
+    query.bindValue(":code", _codeListView->currentIndex().data().toString());
+    query.bindValue(":catalog", _currentCatalog);
 
     if (!query.exec())
     {
@@ -393,17 +418,25 @@ void TroubleCodeWidget::deleteItem(const QString &catalog, QSqlDatabase &db)
     {
         QSqlQuery query(db);
 
+        //if (!query.prepare(QString("DELETE FROM [TroubleCode") +
+        //    _langList[i] +
+        //    QString("] WHERE Code='") +
+        //    code +
+        //    QString("'") +
+        //    QString(" AND Catalog='") +
+        //    catalog +
+        //    QString("'")))
+        //{
+        //    continue;
+        //}
         if (!query.prepare(QString("DELETE FROM [TroubleCode") +
             _langList[i] +
-            QString("] WHERE Code='") +
-            code +
-            QString("'") +
-            QString(" AND Catalog='") +
-            catalog +
-            QString("'")))
+            QString("] WHERE Code=:code AND Catalog=:catalog")))
         {
             continue;
         }
+        query.bindValue(":code", code);
+        query.bindValue(":catalog", catalog);
 
         if (!query.exec())
         {

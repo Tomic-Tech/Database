@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
     , _text(0)
     , _troubleCode(0)
     , _liveData(0)
+    , _command(0)
 {
     _ui.setupUi(this);
 
@@ -66,6 +67,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     _liveData = new LiveDataWidget(_langList, _ui.tabWidget);
     _ui.tabWidget->addTab(_liveData, trUtf8("Live Data"));
+
+    _command = new CommandWidget(_ui.tabWidget);
+    _ui.tabWidget->addTab(_command, trUtf8("Command"));
 
     connect(_ui.action_New, SIGNAL(triggered()), this, SLOT(newDB()));
     connect(_ui.action_Open, SIGNAL(triggered()), this, SLOT(openDB()));
@@ -141,6 +145,7 @@ void MainWindow::createTables()
     _text->createTable(_db);
     _troubleCode->createTable(_db);
     _liveData->createTable(_db);
+    _command->createTable(_db);
 }
 
 void MainWindow::enableAllButtons()
@@ -169,6 +174,7 @@ void MainWindow::newModels()
     _text->setDB(_db);
     _troubleCode->setDB(_db);
     _liveData->setDB(_db);
+    _command->setDB(_db);
 }
 
 void MainWindow::deleteModels()
@@ -189,6 +195,10 @@ void MainWindow::insertItem()
     else if (_ui.tabWidget->currentWidget() == _liveData)
     {
         _liveData->insertNewItem(_ui.catalogList->currentIndex().data().toString(), _db);
+    }
+    else if (_ui.tabWidget->currentWidget() == _command)
+    {
+        _command->insertNewItem(_ui.catalogList->currentIndex().data().toString(), _db);
     }
 }
 
@@ -212,6 +222,10 @@ void MainWindow::deleteItem()
     {
         _liveData->deleteItem(_ui.catalogList->currentIndex().data().toString(), _db);
     }
+    else if (_ui.tabWidget->currentWidget() == _command)
+    {
+        _command->deleteItem(_ui.catalogList->currentIndex().data().toString(), _db);
+    }
 }
 
 void MainWindow::addCatalog()
@@ -227,8 +241,13 @@ void MainWindow::addCatalog()
         _liveData->setCurrentCatalog(catalog);
         _catalogList.setStringList(_liveData->catalogList());
     }
+    else if (_ui.tabWidget->currentWidget() == _command)
+    {
+        _command->setCurrentCatalog(catalog);
+        _catalogList.setStringList(_command->catalogList());
+    }
 
-    _ui.catalogList->setCurrentIndex(_catalogList.index(0));
+    _ui.catalogList->setCurrentIndex(_catalogList.index(_catalogList.rowCount() - 1));
 }
 
 void MainWindow::changePage(int index)
@@ -242,6 +261,11 @@ void MainWindow::changePage(int index)
     {
         _catalogList.setStringList(_liveData->catalogList());
         _liveData->setCurrentCatalog(_catalogList.index(0).data().toString());
+    }
+    else if (_ui.tabWidget->currentWidget() == _command)
+    {
+        _catalogList.setStringList(_command->catalogList());
+        _command->setCurrentCatalog(_catalogList.index(0).data().toString());
     }
 
     _ui.catalogList->setCurrentIndex(_catalogList.index(0));
@@ -257,5 +281,9 @@ void MainWindow::catalogChange(QModelIndex index)
     else if (_ui.tabWidget->currentWidget() == _liveData)
     {
         _liveData->setCurrentCatalog(catalog);
+    }
+    else if (_ui.tabWidget->currentWidget() == _command)
+    {
+        _command->setCurrentCatalog(catalog);
     }
 }

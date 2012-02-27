@@ -9,6 +9,7 @@
 #include "textwidget.h"
 #include "troublecodewidget.h"
 #include "livedatawidget.h"
+#include "commandwidget.h"
 
 class MainWindow : public QMainWindow
 {
@@ -41,6 +42,7 @@ private:
     TextWidget *_text;
     TroubleCodeWidget *_troubleCode;
     LiveDataWidget *_liveData;
+    CommandWidget *_command;
 };
 
 #endif
