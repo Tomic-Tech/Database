@@ -16,7 +16,7 @@ CommandWidget::CommandWidget(QWidget *parent /* = 0 */)
     setLayout(mainLayout);
 
     _nameListView = new QListView(this);
-    _nameListView->setMaximumWidth(120);
+    _nameListView->setMaximumWidth(240);
 
     _nameListModel = new QStringListModel();
     _nameListView->setModel(_nameListModel);
@@ -196,6 +196,9 @@ void CommandWidget::setCurrentName(const QModelIndex &index)
 void CommandWidget::updateCommand(const QString &text)
 {
     if (_nameListView->hasFocus())
+        return;
+
+    if (_cmdEdit->hasFocus())
         return;
 
     if (_isAddNew)

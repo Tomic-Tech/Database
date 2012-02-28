@@ -267,6 +267,10 @@ void MainWindow::changePage(int index)
         _catalogList.setStringList(_command->catalogList());
         _command->setCurrentCatalog(_catalogList.index(0).data().toString());
     }
+    else
+    {
+        _catalogList.setStringList(QStringList());
+    }
 
     _ui.catalogList->setCurrentIndex(_catalogList.index(0));
 }

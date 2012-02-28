@@ -20,7 +20,7 @@ LiveDataWidget::LiveDataWidget(QStringList &langList, QWidget *parent /* = 0 */)
     setLayout(mainLayout);
 
     _shortNameListView = new QListView(this);
-    _shortNameListView->setMaximumWidth(120);
+    _shortNameListView->setMaximumWidth(240);
 
     _shortNameListModel = new QStringListModel();
     _shortNameListView->setModel(_shortNameListModel);
@@ -475,6 +475,9 @@ void LiveDataWidget::updateContent()
     if (edit == NULL)
         return;
 
+    if (!edit->hasFocus())
+        return;
+
     if (_shortNameListView->hasFocus())
         return;
 
@@ -516,8 +519,11 @@ void LiveDataWidget::updateUnit(const QString &text)
     if (_shortNameListView->hasFocus())
         return;
 
-    //if (_isAddNew)
-    //    return;
+    if (!_unitEdit->hasFocus())
+        return;
+
+    if (_isAddNew)
+        return;
 
     QSqlQuery query(_db);
 
@@ -554,6 +560,9 @@ void LiveDataWidget::updateUnit(const QString &text)
 void LiveDataWidget::updateCommboxID(const QString &text)
 {
     if (_shortNameListView->hasFocus())
+        return;
+
+    if (_commandIDBox->hasFocus())
         return;
 
     if (_isAddNew)
@@ -596,6 +605,9 @@ void LiveDataWidget::updateAlgorithmID(const QString &text)
     if (_shortNameListView->hasFocus())
         return;
 
+    if (_algorithmIDBox->hasFocus())
+        return;
+
     if (_isAddNew)
         return;
 
@@ -636,8 +648,11 @@ void LiveDataWidget::updateDefaultValue(const QString &text)
     if (_shortNameListView->hasFocus())
         return;
 
-    //if (_isAddNew)
-    //    return;
+    if (!_defEdits.value(sender()->objectName())->hasFocus())
+        return;
+
+    if (_isAddNew)
+        return;
 
     QSqlQuery query(_db);
 
@@ -670,6 +685,9 @@ void LiveDataWidget::updateDefaultValue(const QString &text)
 
 void LiveDataWidget::changeAddNew()
 {
+    if (!_shortNameEdit->hasFocus())
+        return;
+
     _isAddNew = true;
     for (int i = 0; i < _langList.size(); i++)
     {

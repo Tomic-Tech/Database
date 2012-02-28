@@ -13,7 +13,7 @@ TextWidget::TextWidget(QStringList &langList, QWidget *parent /* = 0 */)
     setLayout(mainLayout);
 
     _nameListView = new QListView(this);
-    _nameListView->setMaximumWidth(120);
+    _nameListView->setMaximumWidth(240);
 
     _nameListModel = new QStringListModel();
     _nameListView->setModel(_nameListModel);
@@ -142,7 +142,7 @@ void TextWidget::insertNewName(const QString &key, const QString &lang, QSqlData
     //insertText += QString("] VALUES(%1, '%2', '%3')").arg(count).arg(key).arg(_textEdits.value(lang)->toPlainText());
     QString insertText("INSERT INTO [Text");
     insertText += lang;
-    insertText += QString("] VALUES(:id, :name, :content");
+    insertText += QString("] VALUES(:id, :name, :content)");
 
     if (!query.prepare(insertText))
     {
@@ -248,6 +248,7 @@ void TextWidget::setCurrentName(const QModelIndex &index)
 
         if (query.next())
         {
+            _nameEdit->setText(name);
             _textEdits.value(_langList[i])->setPlainText(query.value(0).toString());
         }
     }
@@ -257,6 +258,9 @@ void TextWidget::updateContent()
 {
     QPlainTextEdit *edit = qobject_cast<QPlainTextEdit*>(sender());
     if (edit == NULL)
+        return;
+
+    if (!edit->hasFocus())
         return;
 
     if (_nameListView->hasFocus())
@@ -296,6 +300,9 @@ void TextWidget::updateContent()
 
 void TextWidget::changeAddNew()
 {
+    if (!_nameEdit->hasFocus())
+        return;
+
     _isAddNew = true;
     for (int i = 0; i < _langList.size(); i++)
     {

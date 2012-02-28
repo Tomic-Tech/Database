@@ -14,7 +14,7 @@ TroubleCodeWidget::TroubleCodeWidget(QStringList &list, QWidget *parent /* = 0 *
     setLayout(mainLayout);
 
     _codeListView = new QListView(this);
-    _codeListView->setMaximumWidth(120);
+    _codeListView->setMaximumWidth(240);
 
     _codeListModel = new QStringListModel();
     _codeListView->setModel(_codeListModel);
@@ -360,6 +360,9 @@ void TroubleCodeWidget::updateContent()
 {
     QPlainTextEdit *edit = qobject_cast<QPlainTextEdit*>(sender());
     if (edit == NULL)
+        return;
+
+    if (!edit->hasFocus())
         return;
 
     if (_codeListView->hasFocus())
