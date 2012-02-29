@@ -76,7 +76,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(_ui.pushButtonInsert, SIGNAL(clicked()), this, SLOT(insertItem()));
     connect(_ui.pushButtonSubmit, SIGNAL(clicked()), this, SLOT(submit()));
     connect(_ui.pushButtonDelete, SIGNAL(clicked()), this, SLOT(deleteItem()));
+    connect(_ui.pushButtonDeleteAll, SIGNAL(clicked()), this, SLOT(deleteAll()));
     connect(_ui.pushButtonAddCatalog, SIGNAL(clicked()), this, SLOT(addCatalog()));
+    connect(_ui.pushButtonModifyCatalog, SIGNAL(clicked()), this, SLOT(modifyCatalog()));
     connect(_ui.tabWidget, SIGNAL(currentChanged(int)), this, SLOT(changePage(int)));
     connect(_ui.catalogList, SIGNAL(clicked(QModelIndex)), this, SLOT(catalogChange(QModelIndex)));
 }
@@ -154,6 +156,7 @@ void MainWindow::enableAllButtons()
     _ui.pushButtonInsert->setEnabled(true);
     _ui.pushButtonRevert->setEnabled(true);
     _ui.pushButtonSubmit->setEnabled(true);
+    _ui.pushButtonDeleteAll->setEnabled(true);
 }
 
 void MainWindow::disableAllButtons()
@@ -162,6 +165,7 @@ void MainWindow::disableAllButtons()
     _ui.pushButtonInsert->setEnabled(false);
     _ui.pushButtonRevert->setEnabled(false);
     _ui.pushButtonSubmit->setEnabled(false);
+    _ui.pushButtonDeleteAll->setEnabled(false);
 }
 
 void MainWindow::emptyCatalogLists()
@@ -228,6 +232,16 @@ void MainWindow::deleteItem()
     }
 }
 
+void MainWindow::deleteAll()
+{
+    if (_ui.tabWidget->currentWidget() == _command)
+    {
+        _command->deleteAllItems(_db);
+    }
+
+    _catalogList.setStringList(_command->catalogList());
+}
+
 void MainWindow::addCatalog()
 {
     QString catalog = _ui.lineEditAddSystem->text();
@@ -289,5 +303,24 @@ void MainWindow::catalogChange(QModelIndex index)
     else if (_ui.tabWidget->currentWidget() == _command)
     {
         _command->setCurrentCatalog(catalog);
+    }
+}
+
+void MainWindow::modifyCatalog()
+{
+    bool ok;
+    QString text = QInputDialog::getText(this, trUtf8("Modify Current Catalog"), trUtf8("Catalog"), QLineEdit::Normal, _ui.catalogList->currentIndex().data().toString(), &ok);
+    if (ok && !text.isEmpty())
+    {
+        if (_ui.tabWidget->currentWidget() == _troubleCode)
+        {
+            _troubleCode->modifyCatalog(_ui.catalogList->currentIndex().data().toString(), text, _db);
+            _catalogList.setStringList(_troubleCode->catalogList());
+        }
+        else if (_ui.tabWidget->currentWidget() == _liveData)
+        {
+            _liveData->modifyCatalog(_ui.catalogList->currentIndex().data().toString(), text, _db);
+            _catalogList.setStringList(_liveData->catalogList());
+        }
     }
 }

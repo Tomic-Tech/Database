@@ -34,7 +34,7 @@
        <widget class="QGroupBox" name="groupBox">
         <property name="maximumSize">
          <size>
-          <width>240</width>
+          <width>350</width>
           <height>16777215</height>
          </size>
         </property>
@@ -46,7 +46,7 @@
           <widget class="QListView" name="catalogList">
            <property name="maximumSize">
             <size>
-             <width>240</width>
+             <width>600</width>
              <height>16777215</height>
             </size>
            </property>
@@ -58,6 +58,13 @@
             <widget class="QPushButton" name="pushButtonAddCatalog">
              <property name="text">
               <string>Add Catalog</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButtonModifyCatalog">
+             <property name="text">
+              <string>Modify Catalog</string>
              </property>
             </widget>
            </item>
@@ -97,6 +104,16 @@
         </property>
         <property name="text">
          <string>Insert</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonDeleteAll">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Delete All</string>
         </property>
        </widget>
       </item>

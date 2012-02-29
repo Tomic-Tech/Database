@@ -133,14 +133,20 @@ void CommandWidget::insertNewItem(const QString &name, const QString &catalog, Q
     //    .arg(catalog));
     _idEdit->setText(QString("%1").arg(count));
 
-    if (!query.prepare("INSERT INTO [Command] VALUES(:id, :name, :content, :catalog"))
+    if (!query.prepare("INSERT INTO [Command] VALUES(:id, :name, :command, :catalog)"))
     {
         QString str = query.lastError().databaseText();
         return;
     }
+    QByteArray cmd;
+    for (int i = 0; i < text.size(); i += 2)
+    {
+        cmd.append(static_cast<quint8>(text.mid(i, 2).toUShort(NULL, 16)));
+    }
+
     query.bindValue(":id", count);
     query.bindValue(":name", name);
-    query.bindValue(":content", text);
+    query.bindValue(":command", cmd);
     query.bindValue(":catalog", catalog);
 
     if (!query.exec())
@@ -187,9 +193,9 @@ void CommandWidget::setCurrentName(const QModelIndex &index)
         QString text;
         for (int i = 0; i < cmd.size(); i++)
         {
-            text.append(QString("%1").arg(static_cast<ushort>(cmd[0]), 2, 16, QChar('0')));
+            text.append(QString("%1").arg(static_cast<quint8>(cmd[i]), 2, 16, QChar('0')));
         }
-        _cmdEdit->setText(text);
+        _cmdEdit->setText(text.toUpper());
     }
 }
 
@@ -198,7 +204,7 @@ void CommandWidget::updateCommand(const QString &text)
     if (_nameListView->hasFocus())
         return;
 
-    if (_cmdEdit->hasFocus())
+    if (!_cmdEdit->hasFocus())
         return;
 
     if (_isAddNew)
@@ -239,6 +245,8 @@ void CommandWidget::updateCommand(const QString &text)
 
 void CommandWidget::changeAddNew()
 {
+    if (!_nameEdit->hasFocus())
+        return;
     _isAddNew = true;
     _cmdEdit->setText("");
 }
@@ -319,6 +327,17 @@ void CommandWidget::setCurrentCatalog(const QString &catalog)
         _catalogList.append(catalog);
     }
 
+    _nameListModel->setStringList(_nameList);
+    _nameListView->setCurrentIndex(_nameListModel->index(0));
+    setCurrentName(_nameListModel->index(0));
+}
+
+void CommandWidget::deleteAllItems(QSqlDatabase &db)
+{
+    QSqlQuery query(db);
+    query.exec("DELETE FROM [Command]");
+    _catalogList.clear();
+    _nameList.clear();
     _nameListModel->setStringList(_nameList);
     _nameListView->setCurrentIndex(_nameListModel->index(0));
     setCurrentName(_nameListModel->index(0));

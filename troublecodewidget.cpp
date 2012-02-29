@@ -460,3 +460,20 @@ QStringList TroubleCodeWidget::catalogList()
 {
     return _catalogList;
 }
+
+void TroubleCodeWidget::modifyCatalog(const QString &current, const QString &modify, QSqlDatabase &db)
+{
+    for (int i = 0; i < _langList.size(); i++)
+    {
+        QSqlQuery query(_db);
+        if (!query.prepare(QString("UPDATE [TroubleCode") +
+            _langList[i] +
+            QString("] SET Catalog=:modify WHERE Catalog=:current")))
+            return;
+        query.bindValue(":modify", modify);
+        query.bindValue(":current", current);
+        if (!query.exec())
+            continue;
+    }
+    updateCodeAndCatalog(db);
+}

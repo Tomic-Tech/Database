@@ -31,7 +31,9 @@ private slots:
     void insertItem();
     void submit();
     void deleteItem();
+    void deleteAll();
     void addCatalog();
+    void modifyCatalog();
     void changePage(int index);
     void catalogChange(QModelIndex index);
 private:

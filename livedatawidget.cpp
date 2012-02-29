@@ -758,3 +758,19 @@ void LiveDataWidget::insertNewItem(const QString &catalog, QSqlDatabase &db)
     _shortNameListModel->setStringList(_shortNameList);
     _shortNameListView->setCurrentIndex(_shortNameListModel->index(_shortNameListModel->rowCount()  -1));
 }
+
+void LiveDataWidget::modifyCatalog(const QString &current, const QString &modify, QSqlDatabase &db)
+{
+    for (int i = 0; i < _langList.size(); i++)
+    {
+        QSqlQuery query(db);
+        if (!query.prepare(QString("UPDATE [LiveData") +
+            _langList[i] +
+            QString("] SET Catalog=:modify WHERE Catalog=:current")))
+            continue;
+        query.bindValue(":modify", modify);
+        query.bindValue(":current", current);
+        query.exec();
+    }
+    updateShortNameAndCatalog(db);
+}

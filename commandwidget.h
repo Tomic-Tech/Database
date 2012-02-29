@@ -14,6 +14,7 @@ public:
     void setDB(QSqlDatabase &db);
     void insertNewItem(const QString &catalog, QSqlDatabase &db);
     void deleteItem(const QString &catalog, QSqlDatabase &db);
+    void deleteAllItems(QSqlDatabase &db);
     QStringList catalogList();
 public slots:
     void setCurrentCatalog(const QString &catalog);
