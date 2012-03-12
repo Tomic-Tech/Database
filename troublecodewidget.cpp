@@ -405,6 +405,9 @@ void TroubleCodeWidget::updateContent()
 
 void TroubleCodeWidget::changeAddNew()
 {
+    if (!_codeEdit->hasFocus())
+        return;
+
     _isAddNew = true;
     for (int i = 0; i < _langList.size(); i++)
     {
